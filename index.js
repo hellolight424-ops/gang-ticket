@@ -198,7 +198,7 @@ Kies voor nu de meest geschikte categorie!`
             .setColor(0x8B0000)
             .setThumbnail('https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png')
             .setFooter({
-                text: 'Bloody Roleplay',
+                text: 'Bloody Angels',
                 iconURL: 'https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png'
             })
             .setTimestamp();
@@ -222,13 +222,24 @@ await interaction.channel.send({
 
     // ---------- Open ticket button ----------
 if (interaction.isButton() && interaction.customId === 'ticket_open') {
-
     await interaction.deferReply({ ephemeral: true });
 
+    // Originele embed terug
     const embed = new EmbedBuilder()
         .setTitle('📂 Selecteer een categorie')
-        .setDescription(`Kies hieronder de categorie die het beste past bij jouw ticket.`)
-        .setColor(0x8B0000);
+        .setDescription(
+`Kies hieronder de categorie die het beste past bij jouw ticket.
+
+⚠️ Let op:
+- Je ontvangt eerst een vragenlijst in DM
+- Daarna wordt je ticket aangemaakt`
+        )
+        .setColor(0x8B0000)
+        .setThumbnail('https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png')
+        .setFooter({
+            text: 'Bloody Angels',
+            iconURL: 'https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png'
+        });
 
     const selectRow = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
@@ -243,11 +254,13 @@ if (interaction.isButton() && interaction.customId === 'ticket_open') {
             ])
     );
 
-    return interaction.editReply({
+    await interaction.editReply({
+        content: '✅ Selecteer een categorie voor je ticket.',
         embeds: [embed],
         components: [selectRow]
     });
 }
+
 
     // ---------- Select menu ----------
 if (interaction.isChatInputCommand() && interaction.commandName === 'ticket') {
