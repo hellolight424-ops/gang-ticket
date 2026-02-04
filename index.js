@@ -221,51 +221,38 @@ await interaction.channel.send({
     }
 
     // ---------- Open ticket button ----------
-    if (interaction.isButton() && interaction.customId === 'ticket_open') {
-        const embed = new EmbedBuilder()
-            .setTitle('📂 Selecteer een categorie')
-            .setDescription(
-`Kies hieronder de categorie die het beste past bij jouw ticket.
+if (interaction.isButton() && interaction.customId === 'ticket_open') {
 
-⚠️ Let op:
-- Je ontvangt eerst een vragenlijst in DM
-- Daarna wordt je ticket aangemaakt`
-            )
-            .setColor(0x8B0000)
-            .setThumbnail('https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png')
-            .setFooter({
-                text: 'Bloody Angels',
-                iconURL: 'https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png'
-            });
+    await interaction.deferReply({ ephemeral: true });
 
-        const selectRow = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('ticket_select')
-                .setPlaceholder('📋 Selecteer een categorie')
-                .addOptions([
-                    { label: 'Vragen', value: 'vragen', emoji: '🟢' },
-                    { label: 'Solliciteren', value: 'solliciteren', emoji: '🔵' },
-                    { label: 'Klachten', value: 'klachten', emoji: '🔴' },
-                    { label: 'Ally Aanvraag', value: 'ally', emoji: '🟣' },
-                    { label: 'Wapen Inkoop/Verkoop', value: 'wapen_inkoop_verkoop', emoji: '🟤' }
-                ])
-        );
+    const embed = new EmbedBuilder()
+        .setTitle('📂 Selecteer een categorie')
+        .setDescription(`Kies hieronder de categorie die het beste past bij jouw ticket.`)
+        .setColor(0x8B0000);
 
-            await interaction.editReply({
-        content: '✅ Ticket panel geplaatst.'
-    });
+    const selectRow = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId('ticket_select')
+            .setPlaceholder('📋 Selecteer een categorie')
+            .addOptions([
+                { label: 'Vragen', value: 'vragen', emoji: '🟢' },
+                { label: 'Solliciteren', value: 'solliciteren', emoji: '🔵' },
+                { label: 'Klachten', value: 'klachten', emoji: '🔴' },
+                { label: 'Ally Aanvraag', value: 'ally', emoji: '🟣' },
+                { label: 'Wapen Inkoop/Verkoop', value: 'wapen_inkoop_verkoop', emoji: '🟤' }
+            ])
+    );
 
-    await interaction.channel.send({
+    return interaction.editReply({
         embeds: [embed],
-        components: [buttonRow]
+        components: [selectRow]
     });
 }
 
-    }
-
     // ---------- Select menu ----------
-    if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_select') {
-        await interaction.deferReply({ ephemeral: true });
+if (interaction.isChatInputCommand() && interaction.commandName === 'ticket') {
+
+    await interaction.deferReply({ ephemeral: true });
         const category = interaction.values[0];
         const answers = [];
         const dm = await user.createDM();
