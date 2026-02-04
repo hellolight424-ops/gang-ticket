@@ -251,7 +251,7 @@ await interaction.channel.send({
                 ])
         );
 
-        return interaction.editReply({ embeds: [embed], components: [selectRow], ephemeral: true });
+        return interaction.reply({ embeds: [embed], components: [selectRow], ephemeral: true });
     }
 
     // ---------- Select menu ----------
