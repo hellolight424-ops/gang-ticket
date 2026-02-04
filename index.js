@@ -181,7 +181,7 @@ client.on(Events.InteractionCreate, async interaction => {
         const embed = new EmbedBuilder()
             .setTitle('🎫 Bloody – Tickets')
             .setDescription(
-`Beste Criminelen van **Vertex Roleplay**, hier ben je aan het juiste adres om vragen aan ons kader team te stellen.
+`Beste Criminelen van **Groningen Roleplay**, hier ben je aan het juiste adres om vragen aan ons gang te stellen.
 
 Druk op de knop onder dit bericht om een ticket te openen!
 Selecteer de categorie die het beste past bij jouw vraag. Als de gewenste categorie er niet bij staat, overwegen we deze mogelijk later toe te voegen.
@@ -191,6 +191,7 @@ Selecteer de categorie die het beste past bij jouw vraag. Als de gewenste catego
 🔹 Solliciteren
 🔹 Klachten
 🔹 Ally Aanvraag
+🔹 Wapen Inkoop/Verkoop
 
 Kies voor nu de meest geschikte categorie!`
             )
