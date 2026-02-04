@@ -209,7 +209,7 @@ Kies voor nu de meest geschikte categorie!`
                 .setLabel('Open ticket')
                 .setStyle(ButtonStyle.Primary)
         );
-await interaction.reply({
+await interaction.editReply({
     content: '✅ Ticket panel geplaatst.',
     ephemeral: true
 });
