@@ -251,7 +251,16 @@ await interaction.channel.send({
                 ])
         );
 
-        return interaction.reply({ embeds: [embed], components: [selectRow], ephemeral: true });
+            await interaction.editReply({
+        content: '✅ Ticket panel geplaatst.'
+    });
+
+    await interaction.channel.send({
+        embeds: [embed],
+        components: [buttonRow]
+    });
+}
+
     }
 
     // ---------- Select menu ----------
