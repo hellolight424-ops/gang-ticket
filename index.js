@@ -247,7 +247,7 @@ await interaction.channel.send({
                     { label: 'Solliciteren', value: 'solliciteren', emoji: '🔵' },
                     { label: 'Klachten', value: 'klachten', emoji: '🔴' },
                     { label: 'Ally Aanvraag', value: 'ally', emoji: '🟣' },
-                    { label: 'Wapen Inkoop/Verkoop', value: 'wapen_inkoop/verkoop', emoji: '🟤' }
+                    { label: 'Wapen Inkoop/Verkoop', value: 'wapen_inkoop_verkoop', emoji: '🟤' }
                 ])
         );
 
