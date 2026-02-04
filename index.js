@@ -1,5 +1,18 @@
 require('dotenv').config();
 
+const express = require("express");
+const app = express();
+
+const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => {
+  res.send("Bot is online!");
+});
+
+app.listen(PORT, () => {
+  console.log(`Webserver draait op poort ${PORT}`);
+});
+
 const {
     Client,
     GatewayIntentBits,
@@ -14,7 +27,8 @@ const {
     Routes,
     SlashCommandBuilder,
     EmbedBuilder,
-    Events
+    Events,
+    ActivityType
 } = require('discord.js');
 
 const TOKEN = process.env.TOKEN;
@@ -26,7 +40,8 @@ const CATEGORY_PREFIX = {
     vragen: '🟢-vraag',
     solliciteren: '🔵-sollicatie',
     klachten: '🔴-klacht',
-    ally: '🟣-ally'
+    ally: '🟣-ally',
+    wapen_inkoop_verkoop: '🟤-Wapens-inkoop/verkoop'
 };
 
 // ---------- Parent categorie IDs ----------
@@ -48,12 +63,20 @@ const STAFF_ROLES = {
 // ---------- Vragen per categorie ----------
 const QUESTIONS = {
     solliciteren: [
-        'Wat is je naam?',
-        'Wat is je leeftijd?',
-        'Waarom wil je staff worden?',
-        'Hoeveel uur per week ben je actief?'
+        '1. Wat is je naam?',
+        '2. Wat is je leeftijd?',
+        '3. Wat is je Motivatie -# ( Minimaal 30 woorden )?',
+        '4. Waarom Specifiek Bloody Angels?',
+        '5. 3 Plus Punten',
+        '6. 2 Minpunten',
+        '7. Ken je de Apv?',
+        '8. Heb je ervaringen? -# zo ja, welke Gang en in welke Steden?'
+
+
     ],
-    vragen: ['Wat is je vraag?'],
+    vragen: [
+        'Wat is je vraag?'
+    ],
     klachten: [
         'Tegen wie is de klacht?',
         'Wat is er gebeurd?',
@@ -63,6 +86,11 @@ const QUESTIONS = {
         'Naam van de server?',
         'Hoeveel leden?',
         'Invite link?'
+    ],
+    wapen_inkoop_verkoop: [
+        'Wat is je naam?',
+        'Welke Wapen(s) wil je Kopen/Verkopen?',
+        'Wat is jou budget/prijs?'
     ]
 };
 
@@ -81,9 +109,17 @@ const client = new Client({
 });
 
 // ================= READY =================
-client.once(Events.ClientReady, () => {
-    console.log(`${client.user.tag} is online!`);
-});
+module.exports = {
+  name: 'clientReady',
+  once: true,
+  execute(client) {
+    console.log(`${client.user.tag} is online`);
+
+    client.user.setActivity("Murat's Shop", {
+      type: ActivityType.Watching,
+    });
+  },
+};
 
 // ================= SLASH COMMANDS =================
 const commands = [
@@ -117,7 +153,8 @@ const commands = [
                       { name: '🔹 Vragen', value: 'vragen' },
                       { name: '🔹 Solliciteren', value: 'solliciteren' },
                       { name: '🔹 Klachten', value: 'klachten' },
-                      { name: '🔹 Ally Aanvraag', value: 'ally' }
+                      { name: '🔹 Ally Aanvraag', value: 'ally' },
+                      { name: '🔹 Wapen Inkoop/Verkoop', value: 'wapen_inkoop_verkoop' }
                   )
         ),
 
@@ -171,8 +208,8 @@ Kies voor nu de meest geschikte categorie!`
                 .setLabel('Open ticket')
                 .setStyle(ButtonStyle.Primary)
         );
-
-        return interaction.reply({ embeds: [embed], components: [buttonRow] });
+        await interaction.reply({ content: '✅ Ticket panel geplaatst.', Flags: 64 });
+        return interaction.channel.send({ embeds: [embed], components: [buttonRow] });
     }
 
     // ---------- Open ticket button ----------
@@ -189,7 +226,7 @@ Kies voor nu de meest geschikte categorie!`
             .setColor(0x8B0000)
             .setThumbnail('https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png')
             .setFooter({
-                text: 'Bloody Roleplay',
+                text: 'Bloody Angels',
                 iconURL: 'https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png'
             });
 
@@ -201,7 +238,8 @@ Kies voor nu de meest geschikte categorie!`
                     { label: 'Vragen', value: 'vragen', emoji: '🟢' },
                     { label: 'Solliciteren', value: 'solliciteren', emoji: '🔵' },
                     { label: 'Klachten', value: 'klachten', emoji: '🔴' },
-                    { label: 'Ally Aanvraag', value: 'ally', emoji: '🟣' }
+                    { label: 'Ally Aanvraag', value: 'ally', emoji: '🟣' },
+                    { label: 'Wapen Inkoop/Verkoop', value: 'wapen_inkoop/verkoop', emoji: '🟤' }
                 ])
         );
 
@@ -246,9 +284,9 @@ Kies voor nu de meest geschikte categorie!`
 
         // CatEmbed
         const catEmbed = new EmbedBuilder()
-            .setTitle(`Welkom <@${user.id}>!`)
+            .setTitle(`Welkom !`)
             .setDescription(
-`Welkom in je ticket! Wacht geduldig op een antwoord.
+`Welkom, <@${user.id}> in je ticket! Wacht geduldig op een antwoord.
 
 **De Regels**
 - Niet schelden
@@ -277,7 +315,7 @@ Kies voor nu de meest geschikte categorie!`
             .setTitle('✅ Vragenlijst verzonden')
             .setDescription(`Bedankt voor het invullen van de vragenlijst!\n\nJe ticket is succesvol aangemaakt: ${ticketChannel}`)
             .setColor(0x57F287)
-            .setFooter({ text: 'Bloody Roleplay' });
+            .setFooter({ text: 'Bloody Angels' });
 
         await dm.send({ embeds: [confirmEmbed] });
         return interaction.editReply({ content: `✅ Ticket aangemaakt: ${ticketChannel}` });
