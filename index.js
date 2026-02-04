@@ -177,54 +177,43 @@ client.on(Events.InteractionCreate, async interaction => {
     const user = interaction.user;
 
     // ---------- /ticket ----------
-    if (interaction.isChatInputCommand() && interaction.commandName === 'ticket') {
-        const embed = new EmbedBuilder()
-            .setTitle('🎫 Bloody – Tickets')
-            .setDescription(
+ // ---------- /ticket command ----------
+if (interaction.isChatInputCommand() && interaction.commandName === 'ticket') {
+    // Eerst deferen
+    await interaction.deferReply({ ephemeral: true });
+
+    const embed = new EmbedBuilder()
+        .setTitle('🎫 Bloody – Tickets')
+        .setDescription(
 `Beste Criminelen van **Groningen Roleplay**, hier ben je aan het juiste adres om vragen aan ons gang te stellen.
 
 Druk op de knop onder dit bericht om een ticket te openen!
-Selecteer de categorie die het beste past bij jouw vraag. Als de gewenste categorie er niet bij staat, overwegen we deze mogelijk later toe te voegen.
+Selecteer de categorie die het beste past bij jouw vraag.`
+        )
+        .setColor(0x8B0000)
+        .setThumbnail('https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png')
+        .setFooter({ text: 'Bloody Roleplay', iconURL: 'https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png' })
+        .setTimestamp();
 
-**📋 Beschikbare Categorieën:**
-🔹 Vragen
-🔹 Solliciteren
-🔹 Klachten
-🔹 Ally Aanvraag
-🔹 Wapen Inkoop/Verkoop
+    const buttonRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('ticket_open')
+            .setLabel('Open ticket')
+            .setStyle(ButtonStyle.Primary)
+    );
 
-Kies voor nu de meest geschikte categorie!`
-            )
-            .setColor(0x8B0000)
-            .setThumbnail('https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png')
-            .setFooter({
-                text: 'Bloody Angels',
-                iconURL: 'https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png'
-            })
-            .setTimestamp();
+    // Verstuur reply
+    await interaction.editReply({
+        content: '✅ Ticket panel geplaatst.',
+        embeds: [embed],
+        components: [buttonRow]
+    });
+}
 
-        const buttonRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('ticket_open')
-                .setLabel('Open ticket')
-                .setStyle(ButtonStyle.Primary)
-        );
-await interaction.editReply({
-    content: '✅ Ticket panel geplaatst.',
-    ephemeral: true
-});
-
-await interaction.channel.send({
-    embeds: [embed],
-    components: [buttonRow]
-});
-    }
-
-    // ---------- Open ticket button ----------
+// ---------- Open ticket button ----------
 if (interaction.isButton() && interaction.customId === 'ticket_open') {
     await interaction.deferReply({ ephemeral: true });
 
-    // Originele embed terug
     const embed = new EmbedBuilder()
         .setTitle('📂 Selecteer een categorie')
         .setDescription(
@@ -236,10 +225,7 @@ if (interaction.isButton() && interaction.customId === 'ticket_open') {
         )
         .setColor(0x8B0000)
         .setThumbnail('https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png')
-        .setFooter({
-            text: 'Bloody Angels',
-            iconURL: 'https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png'
-        });
+        .setFooter({ text: 'Bloody Angels', iconURL: 'https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png' });
 
     const selectRow = new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
@@ -260,6 +246,7 @@ if (interaction.isButton() && interaction.customId === 'ticket_open') {
         components: [selectRow]
     });
 }
+
 
 
     // ---------- Select menu ----------
