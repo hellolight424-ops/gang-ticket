@@ -283,5 +283,5 @@ await interaction.channel.delete().catch(()=>null);
 
 });
 client.login(process.env.TOKEN)
-  .then(() => console.log("Login poging gestart..."))
-  .catch(err => console.error("Fout bij login:", err));
+  .then(() => console.log("Login gestart..."))
+  .catch(console.error);
