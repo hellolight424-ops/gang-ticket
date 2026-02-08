@@ -283,4 +283,4 @@ await interaction.channel.delete().catch(()=>null);
 
 });
 
-client.login(TOKEN);
+client.login(process.env.TOKEN);
