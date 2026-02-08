@@ -202,7 +202,7 @@ Kies voor nu de meest geschikte categorie!`
                 .setLabel('Open ticket')
                 .setStyle(ButtonStyle.Primary)
         );
-        await interaction.reply({ content: '✅ Ticket panel geplaatst.', Flags: 64 });
+        await interaction.reply({ content: '✅ Ticket panel geplaatst.', flags: 64 });
         return interaction.channel.send({ embeds: [embed], components: [buttonRow] });
     }
 
