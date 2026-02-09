@@ -307,14 +307,94 @@ return interaction.editReply({ content:`✅ Ticket aangemaakt: ${ticketChannel}`
 
 if (interaction.isButton() && interaction.customId === 'ticket_close') {
 
-const member = interaction.member;
-const staffAllowed = Object.values(STAFF_ROLES).some(r=>member.roles.cache.has(r));
-if(!staffAllowed) return interaction.reply({ content:'❌ Je hebt geen permissie.', ephemeral:true });
+  const member = interaction.member;
+  const staffAllowed = Object.values(STAFF_ROLES).some(r => member.roles.cache.has(r));
+  if (!staffAllowed) 
+    return interaction.reply({ content: '❌ Je hebt geen permissie.', ephemeral: true });
 
-await interaction.deferUpdate();
-await interaction.channel.delete().catch(()=>null);
+  await interaction.deferUpdate();
+
+  // Verzamel berichten voor transcript
+  const messages = await interaction.channel.messages.fetch({ limit: 100 });
+  const sortedMessages = messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+
+  // Bouw HTML transcript
+  let htmlContent = `
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Ticket Transcript</title>
+    <style>
+      body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+      .message { padding: 10px; margin-bottom: 10px; background: #fff; border-radius: 5px; }
+      .author { font-weight: bold; }
+      .time { color: #888; font-size: 12px; }
+      .content { margin-top: 5px; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <h2>Transcript voor ${interaction.channel.name}</h2>
+  `;
+
+  sortedMessages.forEach(msg => {
+    let content = msg.content || '';
+    if (msg.attachments.size > 0) {
+      msg.attachments.forEach(att => {
+        content += `\n[Bijlage: ${att.url}]`;
+      });
+    }
+    htmlContent += `
+      <div class="message">
+        <div class="author">${msg.author.tag}</div>
+        <div class="time">${new Date(msg.createdTimestamp).toLocaleString()}</div>
+        <div class="content">${content}</div>
+      </div>
+    `;
+  });
+
+  htmlContent += `
+  </body>
+  </html>
+  `;
+
+  const transcriptFile = {
+    attachment: Buffer.from(htmlContent, 'utf-8'),
+    name: `${interaction.channel.name}-transcript.html`
+  };
+
+  // Stuur naar ticket eigenaar via topic ticketOwner:<userId>
+  const topic = interaction.channel.topic;
+  const match = topic?.match(/ticketOwner:(\d+)/);
+  if (match) {
+    const ownerId = match[1];
+    try {
+      const user = await interaction.client.users.fetch(ownerId);
+      await user.send({
+        content: `Hier is de transcript van je ticket **${interaction.channel.name}**`,
+        files: [transcriptFile]
+      });
+    } catch (err) {
+      console.log('Kon transcript niet naar gebruiker sturen:', err);
+    }
+  }
+
+  // Stuur naar logkanaal
+  const LOG_CHANNEL_ID = '1466875026904186890'; // pas dit aan
+  const logChannel = await interaction.client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
+  if (logChannel?.isTextBased()) {
+    await logChannel.send({
+      content: `Transcript van gesloten ticket: **${interaction.channel.name}**`,
+      files: [transcriptFile]
+    });
+  }
+
+  // Delete het kanaal na 3 seconden
+  setTimeout(() => {
+    interaction.channel.delete().catch(() => null);
+  }, 3000);
 
 }
+
 
 if (interaction.isChatInputCommand() && interaction.commandName === 'add') {
 const user = interaction.options.getUser('user');
