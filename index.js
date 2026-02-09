@@ -338,6 +338,7 @@ if (interaction.isButton() && interaction.customId === 'ticket_close') {
 <html>
 <head>
 <meta charset="utf-8">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@derockdev/discord-components-core/dist/derockdev-discord-components-core.esm.js"></script>
 <title>${interaction.channel.name}</title>
 </head>
 <body>
