@@ -305,96 +305,7 @@ return interaction.editReply({ content:`✅ Ticket aangemaakt: ${ticketChannel}`
 
 /* CLOSE BUTTON */
 
-if (interaction.isButton() && interaction.customId === 'ticket_close') {
 
-  const member = interaction.member;
-  const staffAllowed = Object.values(STAFF_ROLES).some(r => member.roles.cache.has(r));
-  if (!staffAllowed)
-    return interaction.reply({ content: '❌ Je hebt geen permissie.', ephemeral: true });
-
-  await interaction.deferUpdate();
-
-  // Haal berichten op
-  const messages = await interaction.channel.messages.fetch({ limit: 100 });
-  const sortedMessages = Array.from(messages.values()).sort((a, b) => a.createdTimestamp - b.createdTimestamp);
-
-  // Verzamel profiel info
-  const profiles = {};
-  sortedMessages.forEach(msg => {
-    if (!profiles[msg.author.id]) {
-      profiles[msg.author.id] = {
-        author: msg.author.username,
-        avatar: msg.author.displayAvatarURL({ format: "webp", size: 64 }),
-        roleColor: "#464141",
-        roleName: "Lid",
-        bot: msg.author.bot,
-        verified: false
-      };
-    }
-  });
-
-  // Bouw HTML
-  let htmlContent = `
-<html>
-<head>
-<meta charset="utf-8">
-<script type="module" src="https://cdn.jsdelivr.net/npm/@derockdev/discord-components-core/dist/derockdev-discord-components-core.esm.js"></script>
-<title>${interaction.channel.name}</title>
-</head>
-<body>
-<discord-messages>
-  <discord-header guild="${interaction.guild.name}" channel="${interaction.channel.name}" icon="${interaction.guild.iconURL() || ''}">
-    Start van #${interaction.channel.name}
-  </discord-header>
-`;
-
-  sortedMessages.forEach(msg => {
-    htmlContent += `
-  <discord-message id="m-${msg.id}" timestamp="${msg.createdAt.toISOString()}" profile="${msg.author.id}">
-    ${msg.content || ''}
-    ${msg.embeds.map(embed => `
-      <discord-embed embed-title="${embed.title || ''}" color="${embed.color || '#000000'}" slot="embeds">
-        <discord-embed-description slot="description">${embed.description || ''}</discord-embed-description>
-      </discord-embed>
-    `).join('')}
-    ${msg.attachments.map(att => `<a href="${att.url}">Bijlage</a>`).join('')}
-  </discord-message>
-`;
-  });
-
-  htmlContent += `
-</discord-messages>
-</body>
-</html>
-`;
-
-  const transcriptFile = {
-    attachment: Buffer.from(htmlContent, "utf-8"),
-    name: `${interaction.channel.name}-transcript.html`
-  };
-
-  // Stuur naar ticket owner via topic
-  const topic = interaction.channel.topic;
-  const match = topic?.match(/ticketOwner:(\d+)/);
-  if (match) {
-    try {
-      const ticketOwner = await interaction.client.users.fetch(match[1]);
-      await ticketOwner.send({ content: `Hier is de transcript van je ticket **${interaction.channel.name}**`, files: [transcriptFile] });
-    } catch (err) {
-      console.log('Kon transcript niet naar eigenaar sturen:', err);
-    }
-  }
-
-  // Stuur naar logkanaal
-  const LOG_CHANNEL_ID = '1466875026904186890';
-  const logChannel = await interaction.client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
-  if (logChannel?.isTextBased()) {
-    await logChannel.send({ content: `Transcript van gesloten ticket: **${interaction.channel.name}**`, files: [transcriptFile] });
-  }
-
-  // Delete kanaal na 3 seconden
-  setTimeout(() => interaction.channel.delete().catch(() => null), 3000);
-}
 
 
 
@@ -460,96 +371,132 @@ if (interaction.isChatInputCommand() && interaction.commandName === 'afhandelen'
   return interaction.reply({ embeds: [embed] });
 }
 
-if (interaction.isChatInputCommand() && interaction.commandName === 'close') {
 
-  const member = interaction.member;
-  const staffAllowed = Object.values(STAFF_ROLES)
-    .some(r => member.roles.cache.has(r));
 
-  if(!staffAllowed)
-    return interaction.reply({ content:'❌ Geen permissie.', ephemeral:true });
+async function generateTranscript(channel) {
+  const messages = await channel.messages.fetch({ limit: 100 });
+  const sortedMessages = Array.from(messages.values()).sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 
-  await interaction.reply({ content:'🔒 Ticket wordt gesloten...' });
-
-  // Verzamel berichten
-  const messages = await interaction.channel.messages.fetch({ limit: 100 });
-  const sortedMessages = messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
-
-  // Bouw HTML transcript
-  let htmlContent = `
-  <html>
-  <head>
-    <meta charset="UTF-8">
-    <title>Ticket Transcript</title>
-    <style>
-      body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-      .message { padding: 10px; margin-bottom: 10px; background: #fff; border-radius: 5px; }
-      .author { font-weight: bold; }
-      .time { color: #888; font-size: 12px; }
-      .content { margin-top: 5px; white-space: pre-wrap; }
-    </style>
-  </head>
-  <body>
-    <h2>Transcript voor ${interaction.channel.name}</h2>
-  `;
-
+  // Verzamel unieke profielen
+  const profiles = {};
   sortedMessages.forEach(msg => {
-    let content = msg.content || '';
-    if (msg.attachments.size > 0) {
-      msg.attachments.forEach(att => {
-        content += `\n[Bijlage: ${att.url}]`;
-      });
+    if (!profiles[msg.author.id]) {
+      profiles[msg.author.id] = {
+        author: msg.author.username,
+        avatar: msg.author.displayAvatarURL({ format: "webp", size: 64 }),
+        roleColor: "#464141",
+        roleName: "Lid",
+        bot: msg.author.bot,
+        verified: false
+      };
     }
-    htmlContent += `
-      <div class="message">
-        <div class="author">${msg.author.tag}</div>
-        <div class="time">${new Date(msg.createdTimestamp).toLocaleString()}</div>
-        <div class="content">${content}</div>
-      </div>
-    `;
   });
 
-  htmlContent += `
-  </body>
-  </html>
-  `;
+  // Bouw HTML voor Discord-style transcript
+  let htmlContent = `
+<html>
+<head>
+<meta charset="utf-8">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@derockdev/discord-components-core/dist/derockdev-discord-components-core.esm.js"></script>
+<script>
+window.$discordMessage = { profiles: ${JSON.stringify(profiles)} };
+</script>
+<title>${channel.name} - Transcript</title>
+</head>
+<body style="margin:0;min-height:100vh">
+<discord-messages style="min-height:100vh">
+<discord-header guild="${channel.guild.name}" channel="${channel.name}" icon="${channel.guild.iconURL() || ''}">
+Start van #${channel.name}
+</discord-header>
+`;
 
-  const transcriptFile = {
-    attachment: Buffer.from(htmlContent, 'utf-8'),
-    name: `${interaction.channel.name}-transcript.html`
-  };
+  sortedMessages.forEach(msg => {
+    htmlContent += `<discord-message id="m-${msg.id}" timestamp="${msg.createdAt.toISOString()}" profile="${msg.author.id}">`;
+    // content
+    if (msg.content) htmlContent += msg.content;
+    // embeds
+    msg.embeds.forEach(embed => {
+      htmlContent += `
+<discord-embed embed-title="${embed.title || ''}" color="${embed.color || '#000000'}" slot="embeds">
+  <discord-embed-description slot="description">${embed.description || ''}</discord-embed-description>
+</discord-embed>`;
+    });
+    // bijlagen
+    msg.attachments.forEach(att => {
+      htmlContent += `<a href="${att.url}">Bijlage</a>`;
+    });
+    htmlContent += `</discord-message>\n`;
+  });
+
+  htmlContent += `</discord-messages></body></html>`;
+  return htmlContent;
+}
+
+// BUTTON CLOSE
+if (interaction.isButton() && interaction.customId === 'ticket_close') {
+  const member = interaction.member;
+  const staffAllowed = Object.values(STAFF_ROLES).some(r => member.roles.cache.has(r));
+  if (!staffAllowed)
+    return interaction.reply({ content: '❌ Je hebt geen permissie.', ephemeral: true });
+
+  await interaction.deferUpdate();
+
+  const htmlContent = await generateTranscript(interaction.channel);
+  const transcriptFile = { attachment: Buffer.from(htmlContent, 'utf-8'), name: `${interaction.channel.name}-transcript.html` };
+
+  // Stuur naar ticket owner
+  const topic = interaction.channel.topic;
+  const match = topic?.match(/ticketOwner:(\d+)/);
+  if (match) {
+    try {
+      const ticketOwner = await interaction.client.users.fetch(match[1]);
+      await ticketOwner.send({ content: `Hier is de transcript van je ticket **${interaction.channel.name}**`, files: [transcriptFile] });
+    } catch (err) {
+      console.log('Kon transcript niet naar eigenaar sturen:', err);
+    }
+  }
+
+  // Stuur naar logkanaal
+  const LOG_CHANNEL_ID = '1466875026904186890';
+  const logChannel = await interaction.client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
+  if (logChannel?.isTextBased()) {
+    await logChannel.send({ content: `Transcript van gesloten ticket: **${interaction.channel.name}**`, files: [transcriptFile] });
+  }
+
+  setTimeout(() => interaction.channel.delete().catch(() => null), 3000);
+}
+
+// /close command (zelfde logica als button)
+if (interaction.isChatInputCommand() && interaction.commandName === 'close') {
+  const member = interaction.member;
+  const staffAllowed = Object.values(STAFF_ROLES).some(r => member.roles.cache.has(r));
+  if (!staffAllowed) return interaction.reply({ content: '❌ Geen permissie.', ephemeral: true });
+
+  await interaction.reply({ content: '🔒 Ticket wordt gesloten...' });
+
+  const htmlContent = await generateTranscript(interaction.channel);
+  const transcriptFile = { attachment: Buffer.from(htmlContent, 'utf-8'), name: `${interaction.channel.name}-transcript.html` };
 
   // Stuur naar ticket eigenaar
   const topic = interaction.channel.topic;
   const match = topic?.match(/ticketOwner:(\d+)/);
   if (match) {
-    const ownerId = match[1];
     try {
-      const user = await interaction.client.users.fetch(ownerId);
-      await user.send({
-        content: `Hier is de transcript van je ticket **${interaction.channel.name}**`,
-        files: [transcriptFile]
-      });
+      const ticketOwner = await interaction.client.users.fetch(match[1]);
+      await ticketOwner.send({ content: `Hier is de transcript van je ticket **${interaction.channel.name}**`, files: [transcriptFile] });
     } catch (err) {
-      console.log('Kon transcript niet naar gebruiker sturen:', err);
+      console.log('Kon transcript niet naar eigenaar sturen:', err);
     }
   }
 
-  // Stuur naar logkanaal (zet hier je log kanaal ID)
+  // Stuur naar logkanaal
   const LOG_CHANNEL_ID = '1466875026904186890';
   const logChannel = await interaction.client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
   if (logChannel?.isTextBased()) {
-    await logChannel.send({
-      content: `Transcript van gesloten ticket: **${interaction.channel.name}**`,
-      files: [transcriptFile]
-    });
+    await logChannel.send({ content: `Transcript van gesloten ticket: **${interaction.channel.name}**`, files: [transcriptFile] });
   }
 
-  // Delete channel na 3 seconden
-  setTimeout(() => {
-    interaction.channel.delete().catch(()=>null);
-  }, 3000);
-
+  setTimeout(() => interaction.channel.delete().catch(() => null), 3000);
 }
 
 
