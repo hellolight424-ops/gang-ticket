@@ -40,7 +40,7 @@ const CLIENT_ID = process.env.CLIENT_ID;
 
 const CATEGORY_PREFIX = {
 vragen: '🟢-vraag',
-solliciteren: '🔵-sollicatie',
+solliciteren: '🔵-sollicitatie',
 klachten: '🔴-klacht',
 ally: '🟣-ally',
 wapen_inkoop_verkoop: '🟤-Wapens-inkoop/verkoop'
