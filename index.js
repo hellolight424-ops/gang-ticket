@@ -100,11 +100,46 @@ console.log(`${client.user.tag} is online!`);
 
 const commands = [
 new SlashCommandBuilder().setName('ticket').setDescription('Plaats het ticket panel'),
-new SlashCommandBuilder().setName('add').setDescription('Voeg een gebruiker toe aan dit ticket')
-.addUserOption(opt => opt.setName('user').setDescription('Gebruiker om toe te voegen').setRequired(true)),
-new SlashCommandBuilder().setName('remove').setDescription('Verwijder een gebruiker van dit ticket')
-.addUserOption(opt => opt.setName('user').setDescription('Gebruiker om te verwijderen').setRequired(true)),
-new SlashCommandBuilder().setName('close').setDescription('Sluit het ticket')
+
+new SlashCommandBuilder()
+.setName('add')
+.setDescription('Voeg een gebruiker toe aan dit ticket')
+.addUserOption(opt => 
+  opt.setName('user')
+  .setDescription('Gebruiker om toe te voegen')
+  .setRequired(true)
+),
+
+new SlashCommandBuilder()
+.setName('remove')
+.setDescription('Verwijder een gebruiker van dit ticket')
+.addUserOption(opt => 
+  opt.setName('user')
+  .setDescription('Gebruiker om te verwijderen')
+  .setRequired(true)
+),
+
+new SlashCommandBuilder()
+.setName('rename')
+.setDescription('Hernoem dit ticket')
+.addStringOption(opt =>
+  opt.setName('naam')
+  .setDescription('Nieuwe naam voor ticket')
+  .setRequired(true)
+),
+
+new SlashCommandBuilder()
+.setName('afhandelen')
+.setDescription('Markeer ticket als afgehandeld')
+.addStringOption(opt =>
+  opt.setName('naam')
+  .setDescription('Naam van behandelaar')
+  .setRequired(true)
+),
+
+new SlashCommandBuilder()
+.setName('close')
+.setDescription('Sluit dit ticket')
 ].map(c => c.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -128,7 +163,7 @@ if (interaction.isChatInputCommand() && interaction.commandName === 'ticket') {
 const embed = new EmbedBuilder()
 .setTitle('🎫 Bloody – Tickets')
 .setDescription(
-`Beste Criminelen van **Vertex Roleplay**, hier ben je aan het juiste adres om vragen aan ons kader team te stellen.
+`Beste Criminelen van **Groningen Roleplay**, hier ben je aan het juiste adres om vragen aan ons kader team te stellen.
 
 Druk op de knop onder dit bericht om een ticket te openen!
 Selecteer de categorie die het beste past bij jouw vraag. Als de gewenste categorie er niet bij staat, overwegen we deze mogelijk later toe te voegen.
@@ -144,7 +179,7 @@ Kies voor nu de meest geschikte categorie!`
 )
 .setColor(0x8B0000)
 .setThumbnail('https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png')
-.setFooter({ text:'Bloody Roleplay', iconURL:'https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png'})
+.setFooter({ text:'Bot Developed by Murat', iconURL:'https://image2url.com/r2/default/images/1769799269156-7e853847-4259-4739-bb94-78956ed43a97.png'})
 .setTimestamp();
 
 const buttonRow = new ActionRowBuilder().addComponents(
@@ -229,7 +264,7 @@ topic:`ticketOwner:${user.id}`
 const catEmbed = new EmbedBuilder()
 .setTitle(`Welkom in je ticket!`)
 .setDescription(
-`Welkom, <${user.id}> in je ticket! Wacht geduldig op een antwoord.
+`Welkom, <@${user.id}> in je ticket! Wacht geduldig op een antwoord.
 
 **De Regels**
 - Niet schelden
@@ -280,6 +315,162 @@ await interaction.deferUpdate();
 await interaction.channel.delete().catch(()=>null);
 
 }
+
+if (interaction.isChatInputCommand() && interaction.commandName === 'add') {
+const user = interaction.options.getUser('user');
+
+await interaction.channel.permissionOverwrites.edit(user.id,{
+ViewChannel:true,
+SendMessages:true,
+ReadMessageHistory:true
+});
+
+return interaction.reply({ content:`✅ ${user} toegevoegd aan ticket.`, ephemeral:true });
+}
+
+if (interaction.isChatInputCommand() && interaction.commandName === 'remove') {
+const user = interaction.options.getUser('user');
+
+await interaction.channel.permissionOverwrites.delete(user.id);
+
+return interaction.reply({ content:`❌ ${user} verwijderd uit ticket.`, ephemeral:true });
+}
+
+if (interaction.isChatInputCommand() && interaction.commandName === 'rename') {
+const naam = interaction.options.getString('naam');
+
+await interaction.channel.setName(naam.toLowerCase());
+
+return interaction.reply({ content:`✏️ Ticket hernoemd naar **${naam}**`, ephemeral:true });
+}
+
+if (interaction.isChatInputCommand() && interaction.commandName === 'afhandelen') {
+
+  const naam = interaction.options.getString('naam');
+
+  // Bepaal categorie vanuit kanaalnaam (prefix match)
+  let categoryKey = Object.keys(CATEGORY_PREFIX).find(key =>
+    interaction.channel.name.startsWith(CATEGORY_PREFIX[key].toLowerCase())
+  );
+
+  if (!categoryKey) categoryKey = "vragen"; // fallback
+
+  // Kanaal hernoemen naar: PREFIX-Afhandelen-Naam
+  await interaction.channel.setName(
+    `${CATEGORY_PREFIX[categoryKey]}-Afhandelen-${naam}`
+  );
+
+  // Embed kleuren per categorie
+  const CATEGORY_COLORS = {
+    vragen: 0x57F287,        // groen
+    solliciteren: 0x3498DB,  // blauw
+    klachten: 0xED4245,      // rood
+    ally: 0x9B59B6,          // paars
+    wapen_inkoop_verkoop: 0xA57C52 // bruin
+  };
+
+  const embed = new EmbedBuilder()
+    .setTitle(`🔹 Ticket Afhandelen`)
+    .setDescription(`Deze Ticket gaat verder geholpen worden door: **${naam}**`)
+    .setColor(CATEGORY_COLORS[categoryKey]);
+
+  return interaction.reply({ embeds: [embed] });
+}
+
+if (interaction.isChatInputCommand() && interaction.commandName === 'close') {
+
+  const member = interaction.member;
+  const staffAllowed = Object.values(STAFF_ROLES)
+    .some(r => member.roles.cache.has(r));
+
+  if(!staffAllowed)
+    return interaction.reply({ content:'❌ Geen permissie.', ephemeral:true });
+
+  await interaction.reply({ content:'🔒 Ticket wordt gesloten...' });
+
+  // Verzamel berichten
+  const messages = await interaction.channel.messages.fetch({ limit: 100 });
+  const sortedMessages = messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+
+  // Bouw HTML transcript
+  let htmlContent = `
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Ticket Transcript</title>
+    <style>
+      body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+      .message { padding: 10px; margin-bottom: 10px; background: #fff; border-radius: 5px; }
+      .author { font-weight: bold; }
+      .time { color: #888; font-size: 12px; }
+      .content { margin-top: 5px; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <h2>Transcript voor ${interaction.channel.name}</h2>
+  `;
+
+  sortedMessages.forEach(msg => {
+    let content = msg.content || '';
+    if (msg.attachments.size > 0) {
+      msg.attachments.forEach(att => {
+        content += `\n[Bijlage: ${att.url}]`;
+      });
+    }
+    htmlContent += `
+      <div class="message">
+        <div class="author">${msg.author.tag}</div>
+        <div class="time">${new Date(msg.createdTimestamp).toLocaleString()}</div>
+        <div class="content">${content}</div>
+      </div>
+    `;
+  });
+
+  htmlContent += `
+  </body>
+  </html>
+  `;
+
+  const transcriptFile = {
+    attachment: Buffer.from(htmlContent, 'utf-8'),
+    name: `${interaction.channel.name}-transcript.html`
+  };
+
+  // Stuur naar ticket eigenaar
+  const topic = interaction.channel.topic;
+  const match = topic?.match(/ticketOwner:(\d+)/);
+  if (match) {
+    const ownerId = match[1];
+    try {
+      const user = await interaction.client.users.fetch(ownerId);
+      await user.send({
+        content: `Hier is de transcript van je ticket **${interaction.channel.name}**`,
+        files: [transcriptFile]
+      });
+    } catch (err) {
+      console.log('Kon transcript niet naar gebruiker sturen:', err);
+    }
+  }
+
+  // Stuur naar logkanaal (zet hier je log kanaal ID)
+  const LOG_CHANNEL_ID = '1466875026904186890';
+  const logChannel = await interaction.client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
+  if (logChannel?.isTextBased()) {
+    await logChannel.send({
+      content: `Transcript van gesloten ticket: **${interaction.channel.name}**`,
+      files: [transcriptFile]
+    });
+  }
+
+  // Delete channel na 3 seconden
+  setTimeout(() => {
+    interaction.channel.delete().catch(()=>null);
+  }, 3000);
+
+}
+
+
+
 
 });
 client.login(process.env.TOKEN)
