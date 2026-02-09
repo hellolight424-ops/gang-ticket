@@ -441,13 +441,15 @@ async function generateTranscriptWithEmbeds(channel) {
 }
 
 // Voor de ticket_close button
-if (interaction.isButton() && interaction.customId === 'ticket_close') {
+// Vervang dit in je /close command:
+if (interaction.isChatInputCommand() && interaction.commandName === 'close') {
   const member = interaction.member;
   const staffAllowed = Object.values(STAFF_ROLES).some(r => member.roles.cache.has(r));
-  if (!staffAllowed) return interaction.reply({ content: '❌ Je hebt geen permissie.', ephemeral: true });
+  if (!staffAllowed) return interaction.reply({ content: '❌ Geen permissie.', ephemeral: true });
 
-  await interaction.deferUpdate();
+  await interaction.reply({ content: '🔒 Ticket wordt gesloten...' });
 
+  // Gebruik dezelfde functie als voor button
   const htmlContent = await generateTranscriptWithEmbeds(interaction.channel);
   const transcriptFile = { attachment: Buffer.from(htmlContent, 'utf-8'), name: `${interaction.channel.name}-transcript.html` };
 
@@ -471,39 +473,6 @@ if (interaction.isButton() && interaction.customId === 'ticket_close') {
   }
 
   // Delete channel na 3 seconden
-  setTimeout(() => interaction.channel.delete().catch(() => null), 3000);
-}
-
-// /close command (zelfde logica als button)
-if (interaction.isChatInputCommand() && interaction.commandName === 'close') {
-  const member = interaction.member;
-  const staffAllowed = Object.values(STAFF_ROLES).some(r => member.roles.cache.has(r));
-  if (!staffAllowed) return interaction.reply({ content: '❌ Geen permissie.', ephemeral: true });
-
-  await interaction.reply({ content: '🔒 Ticket wordt gesloten...' });
-
-  const htmlContent = await generateTranscript(interaction.channel);
-  const transcriptFile = { attachment: Buffer.from(htmlContent, 'utf-8'), name: `${interaction.channel.name}-transcript.html` };
-
-  // Stuur naar ticket eigenaar
-  const topic = interaction.channel.topic;
-  const match = topic?.match(/ticketOwner:(\d+)/);
-  if (match) {
-    try {
-      const ticketOwner = await interaction.client.users.fetch(match[1]);
-      await ticketOwner.send({ content: `Hier is de transcript van je ticket **${interaction.channel.name}**`, files: [transcriptFile] });
-    } catch (err) {
-      console.log('Kon transcript niet naar eigenaar sturen:', err);
-    }
-  }
-
-  // Stuur naar logkanaal
-  const LOG_CHANNEL_ID = '1466875026904186890';
-  const logChannel = await interaction.client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
-  if (logChannel?.isTextBased()) {
-    await logChannel.send({ content: `Transcript van gesloten ticket: **${interaction.channel.name}**`, files: [transcriptFile] });
-  }
-
   setTimeout(() => interaction.channel.delete().catch(() => null), 3000);
 }
 
