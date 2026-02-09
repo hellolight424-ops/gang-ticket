@@ -345,7 +345,13 @@ if (interaction.isButton() && interaction.customId === 'ticket_close') {
   <!-- loop hier over berichten -->
   <discord-message id="m-${msg.id}" timestamp="${msg.createdAt.toISOString()}" profile="${msg.author.id}">
     ${msg.content}
-    ${msg.embeds.map(embed => ...)}
+    ${msg.embeds.map(embed => `
+  <discord-embed embed-title="${embed.title || ''}" color="${embed.color || '#000000'}" slot="embeds">
+    <discord-embed-description slot="description">
+      ${embed.description || ''}
+    </discord-embed-description>
+  </discord-embed>
+`).join('')}
     ${msg.attachments.map(att => `<a href="${att.url}">Bijlage</a>`)}
   </discord-message>
 
