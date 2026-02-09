@@ -321,20 +321,37 @@ if (interaction.isButton() && interaction.customId === 'ticket_close') {
 
   // Bouw HTML transcript
   let htmlContent = `
-  <html>
-  <head>
-    <meta charset="UTF-8">
-    <title>Ticket Transcript</title>
-    <style>
-      body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-      .message { padding: 10px; margin-bottom: 10px; background: #fff; border-radius: 5px; }
-      .author { font-weight: bold; }
-      .time { color: #888; font-size: 12px; }
-      .content { margin-top: 5px; white-space: pre-wrap; }
-    </style>
-  </head>
-  <body>
-    <h2>Transcript voor ${interaction.channel.name}</h2>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>${interaction.channel.name}</title>
+  <script>
+    // scroll/klik logica
+  </script>
+  <script>
+    window.$discordMessage = { profiles: {...} } // alle authors
+  </script>
+</head>
+<body>
+<discord-messages>
+  <discord-header 
+    guild="${guild.name}" 
+    channel="${interaction.channel.name}" 
+    icon="${guild.iconURL()}"
+  >
+    Start van #${interaction.channel.name}
+  </discord-header>
+
+  <!-- loop hier over berichten -->
+  <discord-message id="m-${msg.id}" timestamp="${msg.createdAt.toISOString()}" profile="${msg.author.id}">
+    ${msg.content}
+    ${msg.embeds.map(embed => ...)}
+    ${msg.attachments.map(att => `<a href="${att.url}">Bijlage</a>`)}
+  </discord-message>
+
+</discord-messages>
+</body>
+</html>
   `;
 
   sortedMessages.forEach(msg => {
@@ -360,6 +377,21 @@ if (interaction.isButton() && interaction.customId === 'ticket_close') {
     name: `${interaction.channel.name}-transcript.html`
   };
 
+  const profiles = {};
+
+messages.forEach(msg => {
+  if (!profiles[msg.author.id]) {
+    profiles[msg.author.id] = {
+      author: msg.author.username,
+      avatar: msg.author.displayAvatarURL({ format: "webp", size: 64 }),
+      roleColor: "#464141", // fallback of haal uit member.roles
+      roleName: "Lid",
+      bot: msg.author.bot,
+      verified: false
+    };
+  }
+});
+
   // Stuur naar ticket-eigenaar via topic
   const topic = interaction.channel.topic;
   const match = topic?.match(/ticketOwner:(\d+)/);
@@ -380,11 +412,13 @@ if (interaction.isButton() && interaction.customId === 'ticket_close') {
   const LOG_CHANNEL_ID = '1466875026904186890';
   const logChannel = await interaction.client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
   if (logChannel?.isTextBased()) {
-    await logChannel.send({
-      content: `Transcript van gesloten ticket: **${interaction.channel.name}**`,
-      files: [transcriptFile]
-    });
-  }
+const transcriptFile = {
+  attachment: Buffer.from(htmlContent, "utf-8"),
+  name: `${interaction.channel.name}-transcript.html`
+};
+
+await user.send({ files: [transcriptFile] });
+await logChannel.send({ files: [transcriptFile] });
 
   // Verwijder kanaal na 3 seconden
   setTimeout(() => interaction.channel.delete().catch(() => null), 3000);
