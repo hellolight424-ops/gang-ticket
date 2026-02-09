@@ -347,11 +347,13 @@ if (interaction.isChatInputCommand() && interaction.commandName === 'afhandelen'
     interaction.channel.name.startsWith(CATEGORY_PREFIX[key].toLowerCase())
   );
 
-  if (!categoryKey) categoryKey = "vragen"; // fallback
+  if (!categoryKey) {
+    return interaction.reply({ content: '❌ Kan categorie niet bepalen voor dit kanaal.', ephemeral: true });
+  }
 
   // Kanaal hernoemen naar: PREFIX-Afhandelen-Naam
   await interaction.channel.setName(
-    `${CATEGORY_PREFIX[categoryKey]}-Afhandelen-${naam}`
+    `${CATEGORY_PREFIX[categoryKey]}-Afhandelen-${naam}`.toLowerCase()
   );
 
   // Embed kleuren per categorie
@@ -365,11 +367,12 @@ if (interaction.isChatInputCommand() && interaction.commandName === 'afhandelen'
 
   const embed = new EmbedBuilder()
     .setTitle(`🔹 Ticket Afhandelen`)
-    .setDescription(`Deze Ticket gaat verder geholpen worden door: **${naam}**`)
-    .setColor(CATEGORY_COLORS[categoryKey]);
+    .setDescription(`Deze ticket wordt verder behandeld door: **${naam}**`)
+    .setColor(CATEGORY_COLORS[categoryKey] || 0x5865F2); // fallback kleur blauw
 
   return interaction.reply({ embeds: [embed] });
 }
+
 
 
 
