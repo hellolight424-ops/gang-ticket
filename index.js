@@ -309,108 +309,78 @@ if (interaction.isButton() && interaction.customId === 'ticket_close') {
 
   const member = interaction.member;
   const staffAllowed = Object.values(STAFF_ROLES).some(r => member.roles.cache.has(r));
-  if (!staffAllowed) 
+  if (!staffAllowed)
     return interaction.reply({ content: '❌ Je hebt geen permissie.', ephemeral: true });
 
-  // Zorg dat Discord niet timeout
   await interaction.deferUpdate();
 
-  // Haal alle berichten op
+  // Haal berichten op
   const messages = await interaction.channel.messages.fetch({ limit: 100 });
-  const sortedMessages = messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+  const sortedMessages = Array.from(messages.values()).sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 
-  // Bouw HTML transcript
+  // Verzamel profiel info
+  const profiles = {};
+  sortedMessages.forEach(msg => {
+    if (!profiles[msg.author.id]) {
+      profiles[msg.author.id] = {
+        author: msg.author.username,
+        avatar: msg.author.displayAvatarURL({ format: "webp", size: 64 }),
+        roleColor: "#464141",
+        roleName: "Lid",
+        bot: msg.author.bot,
+        verified: false
+      };
+    }
+  });
+
+  // Bouw HTML
   let htmlContent = `
 <html>
 <head>
-  <meta charset="utf-8"/>
-  <title>${interaction.channel.name}</title>
-  <script>
-    // scroll/klik logica
-  </script>
-  <script>
-    window.$discordMessage = { profiles: {...} } // alle authors
-  </script>
+<meta charset="utf-8">
+<title>${interaction.channel.name}</title>
 </head>
 <body>
 <discord-messages>
-  <discord-header 
-    guild="${guild.name}" 
-    channel="${interaction.channel.name}" 
-    icon="${guild.iconURL()}"
-  >
+  <discord-header guild="${interaction.guild.name}" channel="${interaction.channel.name}" icon="${interaction.guild.iconURL() || ''}">
     Start van #${interaction.channel.name}
   </discord-header>
+`;
 
-  <!-- loop hier over berichten -->
+  sortedMessages.forEach(msg => {
+    htmlContent += `
   <discord-message id="m-${msg.id}" timestamp="${msg.createdAt.toISOString()}" profile="${msg.author.id}">
-    ${msg.content}
+    ${msg.content || ''}
     ${msg.embeds.map(embed => `
-  <discord-embed embed-title="${embed.title || ''}" color="${embed.color || '#000000'}" slot="embeds">
-    <discord-embed-description slot="description">
-      ${embed.description || ''}
-    </discord-embed-description>
-  </discord-embed>
-`).join('')}
-    ${msg.attachments.map(att => `<a href="${att.url}">Bijlage</a>`)}
+      <discord-embed embed-title="${embed.title || ''}" color="${embed.color || '#000000'}" slot="embeds">
+        <discord-embed-description slot="description">${embed.description || ''}</discord-embed-description>
+      </discord-embed>
+    `).join('')}
+    ${msg.attachments.map(att => `<a href="${att.url}">Bijlage</a>`).join('')}
   </discord-message>
+`;
+  });
 
+  htmlContent += `
 </discord-messages>
 </body>
 </html>
-  `;
-
-  sortedMessages.forEach(msg => {
-    let content = msg.content || '';
-    if (msg.attachments.size > 0) {
-      msg.attachments.forEach(att => {
-        content += `\n[Bijlage: ${att.url}]`;
-      });
-    }
-    htmlContent += `
-      <div class="message">
-        <div class="author">${msg.author.tag}</div>
-        <div class="time">${new Date(msg.createdTimestamp).toLocaleString()}</div>
-        <div class="content">${content}</div>
-      </div>
-    `;
-  });
-
-  htmlContent += `</body></html>`;
+`;
 
   const transcriptFile = {
-    attachment: Buffer.from(htmlContent, 'utf-8'),
+    attachment: Buffer.from(htmlContent, "utf-8"),
     name: `${interaction.channel.name}-transcript.html`
   };
 
-  const profiles = {};
-
-messages.forEach(msg => {
-  if (!profiles[msg.author.id]) {
-    profiles[msg.author.id] = {
-      author: msg.author.username,
-      avatar: msg.author.displayAvatarURL({ format: "webp", size: 64 }),
-      roleColor: "#464141", // fallback of haal uit member.roles
-      roleName: "Lid",
-      bot: msg.author.bot,
-      verified: false
-    };
-  }
-});
-
-  // Stuur naar ticket-eigenaar via topic
+  // Stuur naar ticket owner via topic
   const topic = interaction.channel.topic;
   const match = topic?.match(/ticketOwner:(\d+)/);
   if (match) {
-    const ownerId = match[1];
     try {
-      const ticketOwner = await interaction.client.users.fetch(ownerId);
-      await ticketOwner.send({
-        content: `Hier is de transcript van je ticket **${interaction.channel.name}**`,
-        files: [transcriptFile]
-      });
+      const ticketOwner = await interaction.client.users.fetch(match[1]);
+      await ticketOwner.send({ content: `Hier is de transcript van je ticket **${interaction.channel.name}**`, files: [transcriptFile] });
     } catch (err) {
-      console.log('Kon transcript niet naar gebruiker sturen:', err);
+      console.log('Kon transcript niet naar eigenaar sturen:', err);
     }
   }
 
@@ -418,17 +388,13 @@ messages.forEach(msg => {
   const LOG_CHANNEL_ID = '1466875026904186890';
   const logChannel = await interaction.client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
   if (logChannel?.isTextBased()) {
-const transcriptFile = {
-  attachment: Buffer.from(htmlContent, "utf-8"),
-  name: `${interaction.channel.name}-transcript.html`
-};
+    await logChannel.send({ content: `Transcript van gesloten ticket: **${interaction.channel.name}**`, files: [transcriptFile] });
+  }
 
-await user.send({ files: [transcriptFile] });
-await logChannel.send({ files: [transcriptFile] });
-
-  // Verwijder kanaal na 3 seconden
+  // Delete kanaal na 3 seconden
   setTimeout(() => interaction.channel.delete().catch(() => null), 3000);
 }
+
 
 
 
