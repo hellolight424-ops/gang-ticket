@@ -312,9 +312,10 @@ if (interaction.isButton() && interaction.customId === 'ticket_close') {
   if (!staffAllowed) 
     return interaction.reply({ content: '❌ Je hebt geen permissie.', ephemeral: true });
 
+  // Zorg dat Discord niet timeout
   await interaction.deferUpdate();
 
-  // Verzamel berichten voor transcript
+  // Haal alle berichten op
   const messages = await interaction.channel.messages.fetch({ limit: 100 });
   const sortedMessages = messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 
@@ -352,24 +353,21 @@ if (interaction.isButton() && interaction.customId === 'ticket_close') {
     `;
   });
 
-  htmlContent += `
-  </body>
-  </html>
-  `;
+  htmlContent += `</body></html>`;
 
   const transcriptFile = {
     attachment: Buffer.from(htmlContent, 'utf-8'),
     name: `${interaction.channel.name}-transcript.html`
   };
 
-  // Stuur naar ticket eigenaar via topic ticketOwner:<userId>
+  // Stuur naar ticket-eigenaar via topic
   const topic = interaction.channel.topic;
   const match = topic?.match(/ticketOwner:(\d+)/);
   if (match) {
     const ownerId = match[1];
     try {
-      const user = await interaction.client.users.fetch(ownerId);
-      await user.send({
+      const ticketOwner = await interaction.client.users.fetch(ownerId);
+      await ticketOwner.send({
         content: `Hier is de transcript van je ticket **${interaction.channel.name}**`,
         files: [transcriptFile]
       });
@@ -379,7 +377,7 @@ if (interaction.isButton() && interaction.customId === 'ticket_close') {
   }
 
   // Stuur naar logkanaal
-  const LOG_CHANNEL_ID = '1466875026904186890'; // pas dit aan
+  const LOG_CHANNEL_ID = '1466875026904186890';
   const logChannel = await interaction.client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
   if (logChannel?.isTextBased()) {
     await logChannel.send({
@@ -388,12 +386,10 @@ if (interaction.isButton() && interaction.customId === 'ticket_close') {
     });
   }
 
-  // Delete het kanaal na 3 seconden
-  setTimeout(() => {
-    interaction.channel.delete().catch(() => null);
-  }, 3000);
-
+  // Verwijder kanaal na 3 seconden
+  setTimeout(() => interaction.channel.delete().catch(() => null), 3000);
 }
+
 
 
 if (interaction.isChatInputCommand() && interaction.commandName === 'add') {
