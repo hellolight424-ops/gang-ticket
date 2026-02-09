@@ -227,9 +227,9 @@ topic:`ticketOwner:${user.id}`
 });
 
 const catEmbed = new EmbedBuilder()
-.setTitle(`Welkom <@${user.id}>!`)
+.setTitle(`Welkom in je ticket!`)
 .setDescription(
-`Welkom in je ticket! Wacht geduldig op een antwoord.
+`Welkom, <${user.id}> in je ticket! Wacht geduldig op een antwoord.
 
 **De Regels**
 - Niet schelden
